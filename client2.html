@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>client2</title>
+  </head>
+  <body>
+    <style>
+      .button {
+        width: 200px;
+        height: 40px;
+        margin: 0 auto;
+        text-align: center;
+        line-height: 40px;
+        text-align: center;
+        margin-bottom: 40px;
+        margin-top: 40px;
+        border: 1px solid #000;
+        cursor: pointer;
+      }
+      #msg-wrapper {
+        text-align: center;
+      }
+    </style>
+    <div class="button" onclick="sendMsg()">向客户端1发送消息</div>
+    <div class="button" onclick="showNotification()">显示消息通知</div>
+    <div id="msg-wrapper"></div>
+    <script>
+      navigator.serviceWorker.addEventListener("message", function(event) {
+        event.ports[0].postMessage("all 给出回应");
+        console.log(event.data);
+        if (event.data.type == 2) {
+          document.getElementById("msg-wrapper").innerHTML = event.data.detail;
+        }
+      });
+      function sendMsg() {
+        var msg = {
+          type: 1,
+          detail: "我是client2，正在向向client1发送消息"
+        };
+        return new Promise(function(resolve, reject) {
+          // Create a Message Channel
+          var msg_chan = new MessageChannel();
+          // Handler for recieving message reply from service worker
+          msg_chan.port1.onmessage = function(event) {
+            if (event.data.error) {
+              reject(event.data.error);
+            } else {
+              resolve(event.data);
+            }
+          };
+          // Send message to service worker along with port for reply
+          navigator.serviceWorker.controller.postMessage(msg, [msg_chan.port2]);
+        });
+      }
+
+      function showNotification() {
+        Notification.requestPermission(function(result) {
+          if (result === "granted") {
+            navigator.serviceWorker.ready.then(function(registration) {
+              registration.showNotification("Vibration Sample", {
+                body: "Buzz! Buzz!"
+              });
+            });
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

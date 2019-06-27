@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>client1</title>
+  </head>
+  <body>
+    <style>
+      .button {
+        width: 200px;
+        height: 40px;
+        margin: 0 auto;
+        text-align: center;
+        line-height: 40px;
+        text-align: center;
+        margin-bottom: 40px;
+        margin-top: 40px;
+        border: 1px solid #000;
+        cursor: pointer;
+      }
+      #msg-wrapper {
+        text-align: center;
+      }
+    </style>
+    <div class="button" onclick="sendMsg()">向客户端2发送消息</div>
+    <div id="msg-wrapper"></div>
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("sw.js").then(function(swReg) {
+          swReg.pushManager.getSubscription().then(function(subscription) {
+            if (subscription) {
+              console.log(JSON.stringify(subscription));
+            } else {
+              console.log("没有订阅");
+              subscribeUser(swReg);
+            }
+          });
+        });
+        navigator.serviceWorker.addEventListener("message", function(event) {
+          event.ports[0].postMessage("all 给出回应");
+          console.log(event.data);
+          if (event.data.type == 1) {
+            document.getElementById("msg-wrapper").innerHTML =
+              event.data.detail;
+          }
+        });
+      }
+
+      function sendMsg() {
+        var msg = {
+          type: 2,
+          detail: "我是client1，正在向向client2发送消息"
+        };
+        return new Promise(function(resolve, reject) {
+          // Create a Message Channel
+          var msg_chan = new MessageChannel();
+          // Handler for recieving message reply from service worker
+          msg_chan.port1.onmessage = function(event) {
+            if (event.data.error) {
+              reject(event.data.error);
+            } else {
+              resolve(event.data);
+            }
+          };
+          // Send message to service worker along with port for reply
+          navigator.serviceWorker.controller.postMessage(msg, [msg_chan.port2]);
+        });
+      }
+
+      // function emitUpdate() {
+      //   var event = document.createEvent("Event");
+      //   event.initEvent("sw.update", true, true);
+      //   window.dispatchEvent(event);
+      // }
+      // if ("serviceWorker" in navigator) {
+      //   navigator.serviceWorker
+      //     .register("/sw.js")
+      //     .then(function(reg) {
+      //       if (reg.waiting) {
+      //         emitUpdate();
+      //         return;
+      //       }
+      //       reg.onupdatefound = function() {
+      //         var installingWorker = reg.installing;
+      //         installingWorker.onstatechange = function() {
+      //           switch (installingWorker.state) {
+      //             case "installed":
+      //               if (navigator.serviceWorker.controller) {
+      //                 emitUpdate();
+      //               }
+      //               break;
+      //           }
+      //         };
+      //       };
+      //     })
+      //     .catch(function(e) {
+      //       console.error("Error during service worker registration:", e);
+      //     });
+      // }
+    </script>
+  </body>
+</html>
